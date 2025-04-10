@@ -1,3 +1,6 @@
+#ifndef NEURALNET_H
+#define NEURALNET_H
+#include "utils.h"
 // CACHING VARS
 extern float w_hidden[HIDDEN][INPUTS]; // weight for each input to hidden layer
 extern float b_hidden[HIDDEN]; //bias per neuron
@@ -20,3 +23,5 @@ float trainAll(float input[][INPUTS], int label[], int epochs);
 int predictClass(float output[]);
 float relu(float x);
 float reluDerivative(float x);
+
+#endif //NEURALNET_H
