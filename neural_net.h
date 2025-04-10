@@ -1,11 +1,3 @@
-void initWeights();
-void forwardPass(float input[], float output[]);
-float computeLoss(float output[], int label);
-void trainSample(float input[], int label);
-void trainAll();
-int predictClass(float output[]);
-float relu(float x);
-float reluDerivative(float x);
 // CACHING VARS
 extern float w_hidden[HIDDEN][INPUTS]; // weight for each input to hidden layer
 extern float b_hidden[HIDDEN]; //bias per neuron
@@ -18,3 +10,13 @@ extern float output[OUTPUT]; // store current output of network
 extern int HIDDEN;
 extern int INPUTS:
 extern int OUTPUT; 
+
+//FUNCTION PROTOS
+void initWeights();
+void forwardPass(float input[], float output[]);
+float computeLoss(float output[], int label);
+void trainSample(float input[], int label);
+float trainAll(float input[][INPUTS], int label[], int epochs);
+int predictClass(float output[]);
+float relu(float x);
+float reluDerivative(float x);

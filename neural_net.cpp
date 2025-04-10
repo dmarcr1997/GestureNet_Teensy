@@ -11,7 +11,7 @@ void initWeights()
   //Init weights and biases of hidden layer to random values
   for (int i = 0; i < HIDDEN; i++) {
     for (int j = 0; j < INPUTS; j++) {
-      w_hidden[i][j] = randomf(0.0, 1.0);
+      w_hidden[i][j] = randomf(-0.5, 0.5);
     }
     b_hidden[i] = 0.0;
   }
@@ -53,7 +53,7 @@ void forwardPass(float inputs[], float output[]) {
     for (int m = 0; m < HIDDEN; m++) {
       // Weighted sum of neurons again (y = x * w1 * w2); where x * w1 = h;
       // For each neuron run y = SUM of all(h * w2) 
-      sum += hidden[m] * w_output[i];
+      sum += hidden[m] * w_output[k][m];
     }
     //Add bias to output activation
     sum += b_output[i];
@@ -113,15 +113,15 @@ void trainSample(float input[], int label) {
 
     // dL/dhidden[k] = sum of error * weights
     for(int m = 0; m < OUTPUTS; m++) {
-      sumGradient += (output[m] - ontHot[m]) * w_output[m][k];
+      sumGradient += (output[m] - oneHot[m]) * w_output[m][k];
     }
 
     // multiply by derivative of relu to factor in activation function
-    sumGradient *= reluDerivative(hidden[i]);
+    sumGradient *= reluDerivative(hidden[k]);
 
     // dL/dw_hidden = sumGradient * input[n]
     for(int n = 0; n < INPUTS; n++) {
-      float gradientHidden = sumGradient * input[j];
+      float gradientHidden = sumGradient * input[n];
       w_hidden[k][n] -= learningRate * gradientHidden; //update hidden layer weights in direction of -gradient 
     }
 
@@ -130,8 +130,38 @@ void trainSample(float input[], int label) {
   }
 }
 
-void trainAll();
-int predictClass(float output[]);
+/**
+* Train model for epoch count 
+* - Calls trainSample
+* - Forward pass
+* - calculates loss
+* - Outputs models average loss
+*/
+float trainAll(float input[][INPUTS], int label[], int epochs) {
+  float totalLoss = 0.0;
+  for (int i = 0 ; i < epochs; i++) {
+    trainSample(input[i], label[i]);
+    forwardPass(input[i], output);
+    totalLoss += computeLoss(output, label[i]);
+  }
+  float averageLoss = totalLoss / SAMPLE_COUNT;
+  return averageLoss;
+}
+
+/**
+* Get predicted class based on maximum output 
+*/
+float predictClass(float output[]) {
+  float maxValue = output[0];
+  int maxIndex = 0;
+  for (int i = 1; i < 4; i++) {
+    if (output[i] > maxValue) {
+      maxValue = output[i];
+      maxIndex = i;
+    }
+  }
+  return maxIndex;
+}
 
 
 float relu(float x) {
