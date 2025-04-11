@@ -1,27 +1,23 @@
-//INIT CONSTS
-HIDDEN = 4; //Hidden layer has 4 neurons
-INPUTS = 6; //6 Inputs from IMU
-OUTPUT = 4; //Output layer has 4 neurons 
-
+#include "neural_net.h"
 /**
 * Function to initialize weights of neurons
 */
 void initWeights()
 {
   //Init weights and biases of hidden layer to random values
-  for (int i = 0; i < HIDDEN; i++) {
-    for (int j = 0; j < INPUTS; j++) {
+  for (int i = 0; i < HIDDEN_COUNT; i++) {
+    for (int j = 0; j < INPUT_COUNT; j++) {
       w_hidden[i][j] = randomf(-0.5, 0.5);
     }
-    b_hidden[i] = 0.0;
+    b_hidden[i] = randomf(-0.1, 0.1);
   }
 
   //Init weights and biases of output layer to random values
-  for (int i = 0; i < OUTPUT; i++) {
-    for (int j = 0; j < HIDDEN; j++) { //HIDDEN Layer count is the input neurons to OUTPUT layer
-      w_output[i][j] = randomf(0.0, 1.0);
+  for (int i = 0; i < OUTPUT_COUNT; i++) {
+    for (int j = 0; j < HIDDEN_COUNT; j++) { //HIDDEN Layer count is the input neurons to OUTPUT layer
+      w_output[i][j] = randomf(-0.5, 0.5);
     }
-    b_output[i] = 0.0;
+    b_output[i] = randomf(-0.1, 0.1);
   }
 
 }
@@ -35,30 +31,31 @@ void initWeights()
 * - Similar approach for the output neuron but leaving out relu.
 */
 void forwardPass(float inputs[], float output[]) {
-  for (int i = 0; i < HIDDEN; i++) {
+  for (int i = 0; i < HIDDEN_COUNT; i++) {
     float sum = 0.0;
-    for (int j = 0; j < INPUTS; j++) {
+    for (int j = 0; j < INPUT_COUNT; j++) {
       //Weighted sum of inputs for each neuron in hidden layer
       sum += inputs[j] * w_hidden[i][j];
     }
     // Add in bias
     sum += b_hidden[i];
     //Apply ReLu
-    hidden[i] = relu(sum);
+    // hidden[i] = relu(sum);
+    hidden[i] = leakyRelu(sum);
   }
 
   // Compute output layer
-  for (int k = 0; k < OUTPUT; k++) {
+  for (int k = 0; k < OUTPUT_COUNT; k++) {
     float sum = 0.0;
-    for (int m = 0; m < HIDDEN; m++) {
+    for (int m = 0; m < HIDDEN_COUNT; m++) {
       // Weighted sum of neurons again (y = x * w1 * w2); where x * w1 = h;
       // For each neuron run y = SUM of all(h * w2) 
       sum += hidden[m] * w_output[k][m];
     }
     //Add bias to output activation
-    sum += b_output[i];
+    sum += b_output[k];
     // Save to output
-    output[i] = sum;
+    output[k] = sum;
   }
 }
 
@@ -70,7 +67,7 @@ void forwardPass(float inputs[], float output[]) {
 */
 float computeLoss(float output[], int label) {
   float loss = 0.0;
-  for (int i =0; i < OUTPUT; i++) {
+  for (int i =0; i < OUTPUT_COUNT; i++) {
     float target = (i == label) ? 1.0 : 0.0; // set to 1 for expected value  and 0 for others
     float diff = output[i] - target; // find (y_hat - y)
     loss += 0.5 * diff * diff; // MSE = 1/2(y_hat - y)^2
@@ -90,17 +87,17 @@ void trainSample(float input[], int label) {
   forwardPass(input, output);
 
   // create one-hot encoded vector using label
-  int oneHot[OUTPUT] = {0};
+  int oneHot[OUTPUT_COUNT] = {0};
   oneHot[label] = 1;
 
   // Backpropagation for outer layer
-  for (int i = 0; i < OUTPUT; i++) {
+  for (int i = 0; i < OUTPUT_COUNT; i++) {
     // compute output error using gradient of loss fn(1/2 (y_hat -y)) which turns inton ()
-    error = output[i] - oneHot[i];
+    float error = output[i] - oneHot[i];
 
     // dL/dq_output (gradient of output weight) = error * hidden[j]
-    for (int j = 0; j < HIDDEN; j++) {
-      gradOut = error * hidden[j];
+    for (int j = 0; j < HIDDEN_COUNT; j++) {
+      float gradOut = error * hidden[j];
       w_output[i][j] -= learningRate * gradOut; //Update output layer weights in directon of -gradient
     }
     // Use error to update bias of output layer
@@ -108,11 +105,11 @@ void trainSample(float input[], int label) {
   }
 
   // Backpropagation for hidden layer
-  for (int k = 0; k < HIDDEN; k++) {
+  for (int k = 0; k < HIDDEN_COUNT; k++) {
     float sumGradient = 0.0;
 
     // dL/dhidden[k] = sum of error * weights
-    for(int m = 0; m < OUTPUTS; m++) {
+    for(int m = 0; m < OUTPUT_COUNT; m++) {
       sumGradient += (output[m] - oneHot[m]) * w_output[m][k];
     }
 
@@ -120,7 +117,7 @@ void trainSample(float input[], int label) {
     sumGradient *= reluDerivative(hidden[k]);
 
     // dL/dw_hidden = sumGradient * input[n]
-    for(int n = 0; n < INPUTS; n++) {
+    for(int n = 0; n < INPUT_COUNT; n++) {
       float gradientHidden = sumGradient * input[n];
       w_hidden[k][n] -= learningRate * gradientHidden; //update hidden layer weights in direction of -gradient 
     }
@@ -137,21 +134,27 @@ void trainSample(float input[], int label) {
 * - calculates loss
 * - Outputs models average loss
 */
-float trainAll(float input[][INPUTS], int label[], int epochs) {
+float trainAll(float input[][INPUT_COUNT], int label[], int epochs, int samples) {
   float totalLoss = 0.0;
   for (int i = 0 ; i < epochs; i++) {
     trainSample(input[i], label[i]);
     forwardPass(input[i], output);
     totalLoss += computeLoss(output, label[i]);
   }
-  float averageLoss = totalLoss / SAMPLE_COUNT;
+  float averageLoss = totalLoss / samples;
   return averageLoss;
 }
 
 /**
 * Get predicted class based on maximum output 
 */
-float predictClass(float output[]) {
+int predictClass(float output[]) {
+  Serial.print("Output: ");
+  for (int i = 0; i < OUTPUT_COUNT; i++) {
+    Serial.print(output[i], 4);
+    Serial.print(" ");
+  }
+  Serial.println();
   float maxValue = output[0];
   int maxIndex = 0;
   for (int i = 1; i < 4; i++) {
@@ -166,6 +169,10 @@ float predictClass(float output[]) {
 
 float relu(float x) {
   return x > 0 ? x : 0;
+}
+
+float leakyRelu(float x) {
+  return x > 0 ? x : 0.1 * x;
 }
 
 float reluDerivative(float x) {
