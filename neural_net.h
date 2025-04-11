@@ -1,11 +1,12 @@
 #ifndef NEURALNET_H
 #define NEURALNET_H
 #include "utils.h"
+#include "data.h"
 //CONSTS
 static const int HIDDEN_COUNT = 6; //Hidden layer has 4 neurons
 static const int INPUT_COUNT = 6; //6 Inputs from IMU
 static const int OUTPUT_COUNT = 4; //Output layer has 4 neurons 
-static const float learningRate = 0.03;
+static const float learningRate = 0.01;
 
 // CACHING VARS
 extern float w_hidden[HIDDEN_COUNT][INPUT_COUNT]; // weight for each input to hidden layer
@@ -26,5 +27,8 @@ int predictClass(float output[]);
 float relu(float x);
 float leakyRelu(float x);
 float reluDerivative(float x);
+float leakyReluDerivative(float x);
+
+void softmax(float input[], float output[], int len);
 
 #endif //NEURALNET_H

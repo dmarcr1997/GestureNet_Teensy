@@ -4,13 +4,13 @@
 */
 void loadTrainingData() {
   for (int i = 0; i < SAMPLE_COUNT; i++) {
-    if (i < 200) { //REST
-      setInputVector(i, randomf(-0.1, 0.1), randomf(-0.1, 0.1), randomf(-0.1, 0.1), randomf(-0.1, 0.1), randomf(-0.1, 0.1), randomf(-0.1, 0.1));
+    if (i < 400) { //REST
+      setInputVector(i, randomf(-0.02, 0.02), randomf(-0.02, 0.02), randomf(-0.02, 0.02), randomf(-0.02, 0.02), randomf(-0.02, 0.02), randomf(-0.02, 0.02));
       trainLabels[i] = 0;
-    } else if (i < 400) { //UP/DOWN
+    } else if (i < 800) { //UP/DOWN
       setInputVector(i, 0.0, 0.0, randomf(-1.0, 1.0), 0.0, randomf(-1.0, 1.0), 0.0);
       trainLabels[i] = 1;
-    } else if (i < 600) { //LEFT/RIGHT
+    } else if (i < 1200) { //LEFT/RIGHT
       setInputVector(i, randomf(-1.0, 1.0), 0.0, 0.0, randomf(-1.0, 1.0), 0.0, 0.0);
       trainLabels[i] = 2;
     } else { //Turn
@@ -18,6 +18,7 @@ void loadTrainingData() {
       trainLabels[i] = 3;
     }
   }
+  shuffleData();
 }
 
 void setInputVector(int i, float a, float b, float c, float d, float e, float f) {
@@ -27,4 +28,20 @@ void setInputVector(int i, float a, float b, float c, float d, float e, float f)
   trainInputs[i][3] = d;
   trainInputs[i][4] = e;
   trainInputs[i][5] = f;
+}
+
+void shuffleData() {
+  for(int i =0; i < SAMPLE_COUNT; i++) {
+    int j = random(SAMPLE_COUNT);
+
+    for (int k = 0; k < 6; k++) {
+      float temp = trainInputs[i][k];
+      trainInputs[i][k] = trainInputs[j][k];
+      trainInputs[j][k] = temp;
+    }
+
+    int tempLabel = trainLabels[i];
+    trainLabels[i] = trainLabels[j];
+    trainLabels[j] = tempLabel;
+  }
 }

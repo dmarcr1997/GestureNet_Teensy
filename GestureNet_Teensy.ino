@@ -1,6 +1,6 @@
 #include "neural_net.h"
 #include "data.h"
-static const int EPOCHS = 400;
+static const int EPOCHS = 300;
 static float averageLoss;
 static bool modelTrained = false;
 

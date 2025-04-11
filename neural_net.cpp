@@ -45,33 +45,29 @@ void forwardPass(float inputs[], float output[]) {
   }
 
   // Compute output layer
+  float logits[OUTPUT_COUNT];
   for (int k = 0; k < OUTPUT_COUNT; k++) {
     float sum = 0.0;
     for (int m = 0; m < HIDDEN_COUNT; m++) {
-      // Weighted sum of neurons again (y = x * w1 * w2); where x * w1 = h;
-      // For each neuron run y = SUM of all(h * w2) 
       sum += hidden[m] * w_output[k][m];
     }
-    //Add bias to output activation
     sum += b_output[k];
-    // Save to output
-    output[k] = sum;
+    logits[k] = sum;
   }
+
+  // Convert logits into probabilities for each label
+  softmax(logits, output, OUTPUT_COUNT);
 }
 
 /**
-* MSE One-hot encoded loss
-* - for prediction labels {up, down, left, right}
+* Cross entropy loss
+* - Measures how close model's predicted probability(softmax) is to label
 * - we would replace each with 0 that is not the input label
 * - then apply MSE to the label based on the output difference
 */
 float computeLoss(float output[], int label) {
-  float loss = 0.0;
-  for (int i =0; i < OUTPUT_COUNT; i++) {
-    float target = (i == label) ? 1.0 : 0.0; // set to 1 for expected value  and 0 for others
-    float diff = output[i] - target; // find (y_hat - y)
-    loss += 0.5 * diff * diff; // MSE = 1/2(y_hat - y)^2
-  }
+  const epsilon = 1e-6; // no log of 0
+  float loss = -log(output[label] + epsilon); // Cross-entropy: -log(probability of (correct_label))
   return loss;
 }
 
@@ -114,7 +110,7 @@ void trainSample(float input[], int label) {
     }
 
     // multiply by derivative of relu to factor in activation function
-    sumGradient *= reluDerivative(hidden[k]);
+    sumGradient *= leakyReluDerivative(hidden[k]);
 
     // dL/dw_hidden = sumGradient * input[n]
     for(int n = 0; n < INPUT_COUNT; n++) {
@@ -130,18 +126,26 @@ void trainSample(float input[], int label) {
 /**
 * Train model for epoch count 
 * - Calls trainSample
-* - Forward pass
 * - calculates loss
 * - Outputs models average loss
 */
 float trainAll(float input[][INPUT_COUNT], int label[], int epochs, int samples) {
-  float totalLoss = 0.0;
+  // average loss
+  float averageLoss = 0.0;
   for (int i = 0 ; i < epochs; i++) {
-    trainSample(input[i], label[i]);
-    forwardPass(input[i], output);
-    totalLoss += computeLoss(output, label[i]);
+    float totalLoss = 0.0;  
+    shuffleData();
+    for(int j = 0; j < samples; j++) {
+      trainSample(input[j], label[j]);
+      totalLoss += computeLoss(output, label[j]);
+    }
+    float avgLoss = totalLoss / samples;
+    averageLoss = avgLoss;
+    Serial.print("Epoch ");
+    Serial.print(i);
+    Serial.print(" - Avg Loss: ");
+    Serial.println(avgLoss, 5);
   }
-  float averageLoss = totalLoss / samples;
   return averageLoss;
 }
 
@@ -166,15 +170,44 @@ int predictClass(float output[]) {
   return maxIndex;
 }
 
-
-float relu(float x) {
-  return x > 0 ? x : 0;
-}
-
+/**
+* Leaky relu activation function
+* - applies non-linearity to hidden-layer outputs
+* - if output > 0 return output
+* - else return x scaled by 0.01
+*/
 float leakyRelu(float x) {
-  return x > 0 ? x : 0.1 * x;
+  return x > 0 ? x : 0.01 * x;
 }
 
-float reluDerivative(float x) {
-  return x > 0 ? 1 : 0;
+
+/*
+* Used in backpropagation for activation slope
+* - similar to above function but only accounting for derivative
+* - dRelu/dx = x > 0 return 1 else return 0.01 
+*/
+float leakyReluDerivative(float x) {
+  return x > 0 ? 1.0 : 0.01;
+}
+
+/*
+* Turns prediction values into a probability distribution between 0-1 all outputs probs add up to be 1
+* - Adding this in to help with overfitting/local minimas
+*/
+void softmax(float input[], float output[], int len) {
+  float maxValue = input[0];
+  for (int i = 1; i < len; i++) {
+    if(input[i] > maxValue) {
+      maxValue = input[i];
+    }
+  }
+
+  float sum = 0.0;
+  for (int i = 0; i < len; i++) {
+    output[i] = exp(input[i] - maxValue);
+    sum += output[i];
+  }
+  for (int i = 0; i < len; i++) {
+    output[i] /= sum;
+  }
 }
