@@ -1,11 +1,13 @@
 #include "neural_net.h"
+#include "imu_data.h"
 #include "data.h"
-static const int EPOCHS = 300;
+#include "const_values.h"
+
 static float averageLoss;
 static bool modelTrained = false;
 
-float trainInputs[SAMPLE_COUNT][INPUT_COUNT];
-int trainLabels[SAMPLE_COUNT];
+float trainInputs[MAX_SAMPLE_COUNT][INPUT_COUNT];
+int trainLabels[MAX_SAMPLE_COUNT];
 float w_hidden[HIDDEN_COUNT][INPUT_COUNT]; 
 float b_hidden[HIDDEN_COUNT];
 float w_output[OUTPUT_COUNT][HIDDEN_COUNT];
@@ -13,14 +15,24 @@ float b_output[OUTPUT_COUNT];
 float hidden[HIDDEN_COUNT];
 float output[OUTPUT_COUNT];
 
+void debugIMU() {
+  float inputs[INPUT_COUNT];
+  readIMUSample(inputs);
+  Serial.println("DEBUG");
+  Serial.println("MOVEMENT\tROTATION");
+  for(auto i : inputs) {
+    Serial.print(i);
+    Serial.print("\t");
+  }
+  Serial.println("DONE");
+}
 
 void setup() {
   Serial.begin(115200); // Start Serial monitor
   delay(1000); // Wait for serial monitor to start
 
   randomSeed(analogRead(A0));
-
-  //load in synthetic data from data.h
+  initIMU();
   loadTrainingData();
 
   //Initialize weights and biases of model
@@ -28,7 +40,7 @@ void setup() {
 
   // Train network
   Serial.println("Training started...");
-  averageLoss = trainAll(trainInputs, trainLabels, EPOCHS, SAMPLE_COUNT);
+  averageLoss = trainAll(trainInputs, trainLabels, EPOCHS, MAX_SAMPLE_COUNT);
 
   Serial.print("Training complete. Final loss:");
   Serial.println(averageLoss);
@@ -42,13 +54,30 @@ void setup() {
 }
 
 void loop() {
+  // debugIMU();
   if(!modelTrained) return;
 
   if(Serial.available()) {
     //Get values to run from Serial, remove commas, and save to inputVector
     String inputValues = Serial.readStringUntil('\n');
-    float inputVect[6];
-    parseSerialInput(inputValues, inputVect);
+    // float inputVect[6];
+    // parseSerialInput(inputValues, inputVect);
+    if(inputValues == "START") {
+      Serial.println("RUNNING");
+    }
+    float inputVect[2];
+    Serial.println("Begin gesture in 3 seconds...");
+    delay(3000);
+    Serial.println("START");
+    delay(1000);
+    readIMUSample(inputVect);
+    Serial.println("DEBUG");
+    Serial.println("MOVEMENT\tROTATION");
+    for(auto i : inputVect) {
+      Serial.print(i);
+      Serial.print("\t");
+    }
+    Serial.println("DONE");
 
     //Run prediction
     float output[4];
@@ -61,13 +90,13 @@ void loop() {
         predictedClass = "Rest";
         break;
       case 1:
-        predictedClass = "Up/Down";
+        predictedClass = "Movement";
         break;
       case 2:
-        predictedClass = "Left/Right";
+        predictedClass = "Rotation";
         break;
       case 3:
-        predictedClass = "Turn";
+        predictedClass = "Movement + Rotation";
         break;
       default:
         predictedClass = "Undefined";

@@ -2,11 +2,11 @@
 #define DATA_H
 
 #include "utils.h"
+#include "const_values.h"
 void loadTrainingData();
-void setInputVector(int i, float a, float b, float c, float d, float e, float f);
+void setInputVector(int i, float a, float b);
 void shuffleData();
-extern float trainInputs[][6];
+extern float trainInputs[][INPUT_COUNT];
 extern int trainLabels[];
-static const int SAMPLE_COUNT = 1600;
 
 #endif //DATA_H

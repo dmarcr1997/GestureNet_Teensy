@@ -7,17 +7,17 @@ void initWeights()
   //Init weights and biases of hidden layer to random values
   for (int i = 0; i < HIDDEN_COUNT; i++) {
     for (int j = 0; j < INPUT_COUNT; j++) {
-      w_hidden[i][j] = randomf(-0.5, 0.5);
+      w_hidden[i][j] = randomf(-0.05, 0.05);
     }
-    b_hidden[i] = randomf(-0.1, 0.1);
+    b_hidden[i] = randomf(-0.01, 0.01);
   }
 
   //Init weights and biases of output layer to random values
   for (int i = 0; i < OUTPUT_COUNT; i++) {
     for (int j = 0; j < HIDDEN_COUNT; j++) { //HIDDEN Layer count is the input neurons to OUTPUT layer
-      w_output[i][j] = randomf(-0.5, 0.5);
+      w_output[i][j] = randomf(-0.05, 0.05);
     }
-    b_output[i] = randomf(-0.1, 0.1);
+    b_output[i] = randomf(-0.01, 0.01);
   }
 
 }
@@ -40,7 +40,6 @@ void forwardPass(float inputs[], float output[]) {
     // Add in bias
     sum += b_hidden[i];
     //Apply ReLu
-    // hidden[i] = relu(sum);
     hidden[i] = leakyRelu(sum);
   }
 
@@ -66,7 +65,7 @@ void forwardPass(float inputs[], float output[]) {
 * - then apply MSE to the label based on the output difference
 */
 float computeLoss(float output[], int label) {
-  const epsilon = 1e-6; // no log of 0
+  const float epsilon = 1e-6; // no log of 0
   float loss = -log(output[label] + epsilon); // Cross-entropy: -log(probability of (correct_label))
   return loss;
 }
@@ -81,7 +80,11 @@ float computeLoss(float output[], int label) {
 void trainSample(float input[], int label) {
   // Compute hidden activates and output values
   forwardPass(input, output);
-
+  if (label < 0 || label >= OUTPUT_COUNT) {
+    Serial.print("Invalid label: ");
+    Serial.println(label);
+    return;
+  }
   // create one-hot encoded vector using label
   int oneHot[OUTPUT_COUNT] = {0};
   oneHot[label] = 1;
@@ -130,22 +133,26 @@ void trainSample(float input[], int label) {
 * - Outputs models average loss
 */
 float trainAll(float input[][INPUT_COUNT], int label[], int epochs, int samples) {
-  // average loss
   float averageLoss = 0.0;
+
+  Serial.println("Starting training loop...");
+  
   for (int i = 0 ; i < epochs; i++) {
-    float totalLoss = 0.0;  
-    shuffleData();
-    for(int j = 0; j < samples; j++) {
-      trainSample(input[j], label[j]);
-      totalLoss += computeLoss(output, label[j]);
+    float totalLoss = 0.0;
+    // Serial.print("Epoch "); Serial.println(i);
+
+    for (int j = 0; j < samples; j++) {
+      trainSample(input[j], label[j]);  // Might crash here
+      float loss = computeLoss(output, label[j]);
+      totalLoss += loss;
     }
+
     float avgLoss = totalLoss / samples;
     averageLoss = avgLoss;
-    Serial.print("Epoch ");
-    Serial.print(i);
-    Serial.print(" - Avg Loss: ");
-    Serial.println(avgLoss, 5);
+    // Serial.print("Avg Loss: ");
+    // Serial.println(avgLoss, 5);
   }
+
   return averageLoss;
 }
 
@@ -206,6 +213,7 @@ void softmax(float input[], float output[], int len) {
   for (int i = 0; i < len; i++) {
     output[i] = exp(input[i] - maxValue);
     sum += output[i];
+    if (!isfinite(output[i])) output[i] = 1e-6;
   }
   for (int i = 0; i < len; i++) {
     output[i] /= sum;

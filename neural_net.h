@@ -2,11 +2,7 @@
 #define NEURALNET_H
 #include "utils.h"
 #include "data.h"
-//CONSTS
-static const int HIDDEN_COUNT = 6; //Hidden layer has 4 neurons
-static const int INPUT_COUNT = 6; //6 Inputs from IMU
-static const int OUTPUT_COUNT = 4; //Output layer has 4 neurons 
-static const float learningRate = 0.01;
+#include "const_values.h"
 
 // CACHING VARS
 extern float w_hidden[HIDDEN_COUNT][INPUT_COUNT]; // weight for each input to hidden layer
